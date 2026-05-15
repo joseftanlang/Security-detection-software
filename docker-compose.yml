@@ -1,0 +1,14 @@
+version: "3.9"
+
+services: 
+  api: 
+    build: .
+    container_name: testapi-testapi-1
+    networks: 
+      - formbricks_default
+    restart: unless-stopped
+
+networks: 
+  formbricks_default: 
+    external: true 
+    name: formbricks_default
