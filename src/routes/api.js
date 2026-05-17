@@ -37,6 +37,54 @@ import express from 'express';
 import { parseInteger, parseBigInt, parsePrivateKey, parseMerkleProof, parseSemaphoreProof } from '../utils/validation.js';
 const router = express.Router();
 
+const enforceSameSiteRequests = process.env.NODE_ENV !== 'development' && process.env.ENFORCE_SAME_SITE_REQUESTS === 'true';
+
+function isSameSiteRequest(req) {
+    const host = req.get('host');
+    const origin = req.get('origin');
+
+    if (origin && host) {
+        try {
+            const actual = new URL(origin);
+            if (actual.host === host) {
+                return true;
+            }
+        } catch (error) {
+            return false;
+        }
+    }
+
+    const referer = req.get('referer');
+    if (referer && host) {
+        try {
+            const actual = new URL(referer);
+            if (actual.host === host) {
+                return true;
+            }
+        } catch (error) {
+            return false;
+        }
+    }
+
+    const secFetchSite = req.get('sec-fetch-site');
+    return secFetchSite === 'same-origin' || secFetchSite === 'same-site';
+}
+
+router.use((req, res, next) => {
+    if (!enforceSameSiteRequests) {
+        return next();
+    }
+
+    if (isSameSiteRequest(req)) {
+        return next();
+    }
+
+    return res.status(403).json({
+        success: false,
+        error: 'API requests must come from this site'
+    });
+});
+
 // IDENTITY 
 router.get('/newidentity', (req, res) => {
     const identity = new Identity();
@@ -70,8 +118,8 @@ router.post('/recoveridentity', (req, res) => {
 });
 
 // GROUP
-router.get("/newgroup", (req, res) => {
-    // TODO: Use Semaphore.sol and its groupid instead 
+router.get("/newgroup", (req, res) => { // TODO groupid can be like formid 
+    // TODO: Use Semaphore.sol and its groupid instead; will also make sure it's persistent 
     const groupId = Object.keys(groups).length;
     groups[groupId] = new Group();
 
@@ -86,7 +134,7 @@ router.get('/grouproot', (req, res) => {
         return res.status(400).json({ success: false, error });
     }
 
-    if (!(groupId in Object.keys(groups))) {
+    if (!(groupId in groups)) {
         return res.status(400).json({
             success: false,
             error: 'group does not exist'
@@ -106,7 +154,7 @@ router.post('/addtogroup', async (req, res) => {
             return res.status(400).json({ success: false, error: intError });
         }
 
-        if (!(parsedGroupId in Object.keys(groups))) {
+        if (!(parsedGroupId in groups)) {
             return res.status(400).json({ success: false, error: 'group does not exist' });
         }
 
@@ -143,7 +191,7 @@ router.get('/getgroupidx', (req, res) => {
     const { value: commitmentBigInt, error: bigIntError } = parseBigInt(req.query.commitment, 'commitment');
     if (bigIntError) return res.status(400).json({ success: false, error: bigIntError });
 
-    if (!(groupId in Object.keys(groups))) {
+    if (!(groupId in groups)) {
         return res.status(400).json({
             success: false,
             error: 'group does not exist'
@@ -155,7 +203,7 @@ router.get('/getgroupidx', (req, res) => {
     if (idx == -1) {
         return res.status(400).json({
             success: false, 
-            error: "member not in group"
+            error: "invalid uid"
         }); 
     }
 
@@ -170,7 +218,7 @@ router.get('/getmerkleproof', (req, res) => {
     const { value: commitmentBigInt, error: bigIntError } = parseBigInt(req.query.commitment, 'commitment');
     if (bigIntError) return res.status(400).json({ success: false, error: bigIntError }); 
 
-    if (!(groupId in Object.keys(groups))) {
+    if (!(groupId in groups)) {
         return res.status(400).json({
             success: false,
             error: 'group does not exist'
@@ -250,6 +298,7 @@ router.post('/generateproof', async (req, res) => {
 });
 
 router.post("/verifyproof", async (req, res) => {
+    // TODO ONCE IT'S ON-CHAIN CHECK THAT ROOT IS CORRECT 
     const {value: sproof, error} = parseSemaphoreProof(req.body); 
     if (error) {
         return res.status(400).json({success:false, error}); 

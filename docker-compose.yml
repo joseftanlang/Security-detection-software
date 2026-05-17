@@ -4,6 +4,10 @@ services:
   api: 
     build: .
     container_name: testapi-testapi-1
+    environment:
+      BOOTSTRAP_GROUPS: "3"
+      ENFORCE_SAME_SITE_REQUESTS: "true"
+      PORT: 2026
     networks: 
       - formbricks_default
     restart: unless-stopped

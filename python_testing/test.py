@@ -1,7 +1,7 @@
 import requests
 from Crypto.Util.number import long_to_bytes
 
-apipath = "http://localhost:3000/api/"
+apipath = "http://localhost:2026/api/"
 
 i1 = requests.get(apipath+"newidentity").json()
 i1c = requests.post(apipath+"recoveridentity", json={"privateKey":i1['privateKey']}).json() 
@@ -40,4 +40,10 @@ proof1 = requests.post(apipath+"generateproof", json=pr1).json()
 print("HELLO WORLD MESSAGE:", repr(long_to_bytes(int(proof1['message']))))
 
 ver = requests.post(apipath+"verifyproof", json=proof1).json()
-print("VERIFIED:", ver) 
+print("VERIFIED:", ver)
+
+# add i2 to group and see if it still verifies 
+print("AFT ADD i2 TO GROUP TOO:", requests.get(apipath+"grouproot?groupId="+str(gid1)).json())
+requests.post(apipath+"addtogroup", json={"groupId": gid1, "commitment": i2['commitment']})
+ver = requests.post(apipath+"verifyproof", json=proof1).json()
+print("VERIFIED:", ver)
