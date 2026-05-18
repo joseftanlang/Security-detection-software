@@ -1,0 +1,51 @@
+<script>
+async function checkForUntyeProof() {
+  const verifyUrl = "untye.auth.uiutech.xyz/api/verifyproof";
+
+  const url = new URL(window.location.href);
+  const proofParam = url.searchParams.get("proof");
+
+  if (!proofParam) {
+    setStatus("Missing proof URL parameter.", false);
+    return false;
+  }
+
+  let proof;
+  try {
+    proof = JSON.parse(proofParam);
+  } catch (err) {
+    setStatus("Invalid proof format in URL.", false);
+    return false;
+  }
+
+  try {
+    const response = await fetch(verifyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(proof)
+    });
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (_) {
+      // non-json response
+      return false; 
+    }
+
+    if (response.ok && data && data.verified === true) {
+      return true; 
+    } else {
+      const reason = data?.error || "Proof verification failed.";
+      console.log(reason); 
+      return false; 
+    }
+  } catch (err) {
+    return false; 
+  }
+  return false; 
+}; 
+if (!(await checkForUntyeProof())) {
+  window.location.href = "https://untye.auth.uiutech.xyz/failure";
+};
+</script>

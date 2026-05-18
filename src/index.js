@@ -4,7 +4,7 @@ import http from 'http';
 
 const app = express();
 const port = process.env.PORT || 2026;
-const productionRedirectBase = 'https://untye.forms.uiutech.xyz/s/';
+const productionRedirectBase = process.env.FORMS_LINK || 'https://untye.forms.uiutech.xyz/s/';
 
 app.use(express.json());
 
@@ -306,6 +306,98 @@ function renderLoginPage(formId) {
 </html>`;
 }
 
+function renderFailurePage() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Authentication failed</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f9efe8;
+      --panel: #fff7f2;
+      --text: #2a1714;
+      --muted: #7a5750;
+      --danger: #b42318;
+      --danger-strong: #7f1d1d;
+      --border: rgba(42, 23, 20, 0.14);
+      --shadow: 0 24px 70px rgba(42, 23, 20, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 15%, rgba(180, 35, 24, 0.15), transparent 30%),
+        radial-gradient(circle at 85% 25%, rgba(191, 80, 58, 0.12), transparent 32%),
+        linear-gradient(180deg, #fff8f3 0%, #f5e8df 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    main {
+      width: min(100%, 560px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 32px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 12px 0 0;
+      font-size: clamp(2rem, 5vw, 2.8rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--danger-strong);
+    }
+
+    p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .notice {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(180, 35, 24, 0.24);
+      background: rgba(180, 35, 24, 0.08);
+      color: var(--danger-strong);
+      font-weight: 650;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Untye verification</p>
+    <h1>Authentication failed</h1>
+    <p>
+      We could not verify your proof for this request.
+      Please retry from the form link or contact the form owner.
+    </p>
+    <div class="notice">Error: proof verification unsuccessful</div>
+  </main>
+</body>
+</html>`;
+}
+
 function requestJson(portNumber, path) {
   return new Promise((resolve, reject) => {
     const request = http.request({
@@ -346,6 +438,10 @@ app.get('/', (req, res) => {
   }
 
   return res.send(renderLoginPage(formId.trim()));
+});
+
+app.get('/failure', (_req, res) => {
+  return res.status(401).send(renderFailurePage());
 });
 
 app.use('/api', apiRouter);
