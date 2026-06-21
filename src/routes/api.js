@@ -255,7 +255,7 @@ router.post('/addtogroup', async (req, res) => {
         }
 
         if (!(groupName in groupIds)) {
-            return res.status(400).json({ success: false, error: 'group does not exist' });
+            return res.status(200).json({ success: false, error: 'group does not exist' });
         }
 
         //console.log("FOUND GROUP"); 
@@ -375,7 +375,7 @@ router.get('/getmerkleproof', (req, res) => {
     if (bigIntError) return res.status(400).json({ success: false, error: bigIntError }); 
 
     if (!(groupName in groupIds)) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false,
             error: 'group does not exist'
         });
@@ -403,7 +403,7 @@ router.get('/getmerkleproof', (req, res) => {
 
     const idx = groups[groupId].indexOf(commitmentBigInt); 
     if (idx == -1) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false, 
             error: "member not in group"
         }); 
@@ -481,7 +481,7 @@ router.get('/grouproot', (req, res) => {
 
 
     if (!(groupName in groupIds)) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false,
             error: 'group does not exist'
         });
@@ -490,7 +490,7 @@ router.get('/grouproot', (req, res) => {
     const groupId = groupIds[groupName]; 
 
     if (!(groupId in groups)) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false,
             error: 'group has no members'
         });
@@ -502,8 +502,9 @@ router.get('/grouproot', (req, res) => {
 router.post("/verifyproof", async (req, res) => {
     const { groupName } = req.body; 
     if (!(groupName in groupIds)) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false,
+            verified: false, 
             error: 'group does not exist'
         });
     }
@@ -515,7 +516,8 @@ router.post("/verifyproof", async (req, res) => {
 
     const messageScopeResult = await verifyMessageScope(groupName, sproof.message, sproof.scope);
     if (!messageScopeResult.verified) {
-        return res.status(400).json({
+        return res.status(200).json({
+            success: true, 
             verified: false,
             error: messageScopeResult.error || 'Invalid or Expired proof'
         });
@@ -528,14 +530,14 @@ router.post("/verifyproof", async (req, res) => {
         console.log("ROOT MISMATCH"); 
         console.log(sproof.merkleTreeRoot); 
         console.log(groups[groupIds[groupName]].root); 
-        return res.status(400).json({verified:false, error:"Invalid or Expired proof"})
+        return res.status(200).json({verified:false, error:"Invalid or Expired proof"})
     }
 
     const groupId = groupIds[groupName];
     const nullifierKey = String(sproof.nullifier);
     //console.log(usedNullifiers); 
     if (usedNullifiers[groupId]?.[nullifierKey]) {
-        return res.status(400).json({
+        return res.status(200).json({
             verified: false,
             error: 'nullifier already used'
         });
@@ -557,7 +559,7 @@ router.post("/verifyproof", async (req, res) => {
 router.post('/verifymessagescope', async (req, res) => {
     const { groupName, message, scope } = req.body;
     if (!(groupName in groupIds)) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false,
             error: 'group does not exist'
         });
@@ -565,7 +567,7 @@ router.post('/verifymessagescope', async (req, res) => {
 
     const messageScopeResult = await verifyMessageScope(groupName, message, scope);
     if (!messageScopeResult.verified) {
-        return res.status(400).json(messageScopeResult);
+        return res.status(200).json(messageScopeResult);
     }
 
     return res.json(messageScopeResult);
@@ -612,7 +614,7 @@ function handleNextBatch(req, res) {
     const { groupName } = req.query 
 
     if (!(groupName in groupIds)) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false,
             error: 'group does not exist'
         });
@@ -658,7 +660,7 @@ router.get('/getgroupidx', (req, res) => {
     if (bigIntError) return res.status(400).json({ success: false, error: bigIntError });
 
     if (!(groupName in groupIds)) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false,
             error: 'group does not exist'
         });
@@ -667,7 +669,7 @@ router.get('/getgroupidx', (req, res) => {
     const idx = groups[groupIds[groupName]].indexOf(commitmentBigInt); 
     //console.log(idx); 
     if (idx == -1) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false, 
             error: "invalid uid"
         }); 
@@ -693,7 +695,7 @@ router.get('/getgroupidxwithgid', (req, res) => {
     if (bigIntError) return res.status(400).json({ success: false, error: bigIntError });
 
     if (!(groupId in groups)) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false,
             error: 'group does not exist'
         });
@@ -702,7 +704,7 @@ router.get('/getgroupidxwithgid', (req, res) => {
     const idx = groups[groupId].indexOf(commitmentBigInt); 
     //console.log(idx); 
     if (idx == -1) {
-        return res.status(400).json({
+        return res.status(200).json({
             success: false, 
             error: "invalid uid"
         }); 

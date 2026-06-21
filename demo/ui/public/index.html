@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Untye Demo UI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">Untye Demo</p>
+      <h1>Temporary identity dashboard</h1>
+      <p class="subtext">Sign in with an OpenID JWT (for example from VoidAuth), mint temporary identities, and track whether each identity is currently active or expired.</p>
+    </section>
+
+    <section class="panel">
+      <h2>0) Login with permanent identity</h2>
+      <label for="jwtInput">OpenID ID token (JWT)</label>
+      <textarea id="jwtInput" rows="5" placeholder="Paste your OpenID id_token JWT here"></textarea>
+      <div class="row">
+        <button id="loginBtn" class="btn">Use token</button>
+        <button id="demoTokenBtn" class="btn btn-ghost">Use demo token</button>
+      </div>
+      <p id="userSummary" class="meta"></p>
+      <p class="hint">OpenID-compatible: this demo uses the JWT sub claim as the permanent identity identifier.</p>
+    </section>
+
+    <section class="panel">
+      <h2>1) Identity actions</h2>
+      <label for="groupInput">Group name</label>
+      <input id="groupInput" value="demo-users" />
+
+      <label for="messageInput">Proof message</label>
+      <input id="messageInput" value="demo-login" />
+
+      <label for="scopeInput">Proof scope template</label>
+      <input id="scopeInput" value="scope:{group}:{sub}" />
+
+      <div class="row">
+        <button id="createIdentityBtn" class="btn">Create temp identity</button>
+        <button id="refreshBtn" class="btn btn-ghost">Refresh statuses</button>
+      </div>
+      <p id="actionStatus" class="meta"></p>
+    </section>
+
+    <section class="panel">
+      <div class="row row-between">
+        <h2>ADMIN) Admin batch control</h2>
+        <span class="pill">manual nextbatch</span>
+      </div>
+
+      <label for="adminTokenInput">Admin token</label>
+      <input id="adminTokenInput" type="password" placeholder="Enter admin token" />
+
+      <label for="adminGroupInput">Group name</label>
+      <input id="adminGroupInput" value="demo-users" />
+
+      <div class="row">
+        <button id="nextBatchBtn" class="btn">Advance to next batch</button>
+        <button id="rootBtn" class="btn btn-ghost">Refresh current root</button>
+      </div>
+
+      <p id="adminStatus" class="meta"></p>
+      <p id="rootSummary" class="meta"></p>
+    </section>
+
+    <section class="panel">
+      <div class="row row-between">
+        <h2>2) Your temporary identities</h2>
+        <span id="identityCount" class="pill">0 identities</span>
+      </div>
+      <div id="identityList" class="identity-list"></div>
+    </section>
+  </main>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "untye-demo-init",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "bootstrap.js",
+  "scripts": {
+    "start": "node bootstrap.js"
+  }
+}

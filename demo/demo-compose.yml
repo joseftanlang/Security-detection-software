@@ -1,0 +1,50 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile.api
+    container_name: untye-demo-api
+    env_file:
+      - .env
+    environment:
+      PORT: 2026
+    ports:
+      - '2026:2026'
+    restart: unless-stopped
+
+  checker:
+    build:
+      context: ./checker
+      dockerfile: Dockerfile
+    container_name: untye-demo-checker
+    env_file:
+      - .env
+    environment:
+      PORT: 3031
+    restart: unless-stopped
+
+  init:
+    build:
+      context: ./init
+      dockerfile: Dockerfile
+    container_name: untye-demo-init
+    depends_on:
+      - api
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: untye-demo-ui
+    depends_on:
+      - api
+    env_file:
+      - .env
+    environment:
+      PORT: 8080
+    ports:
+      - '8080:8080'
+    restart: unless-stopped

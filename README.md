@@ -123,4 +123,5 @@ These are mostly endpoints to provide cryptographic utilities on the admin's sid
 
 # MAJOR TODOs 
 - use real blockchain instead of simulated  
+- ensure JWT signing is enforced well 
 - when checking admin token, use challenge-response or time-gated methods 
