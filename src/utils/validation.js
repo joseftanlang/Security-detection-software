@@ -156,3 +156,27 @@ export function parseSemaphoreProof(raw, name = 'semaphoreProof', { required = t
     return { error: `${name} contains invalid bigint strings` };
   }
 }
+
+export function validateAdminToken(req, { required = true } = {}) {
+  const expectedToken = process.env.ADMIN_TOKEN;
+  const providedToken = req?.query?.admin_token ?? req?.body?.admin_token ?? req?.get?.('x-admin-token');
+
+  // TODO: replace the static token check with a challenge-response or time-window proof flow.
+  if (!expectedToken) {
+    return { error: 'ADMIN_TOKEN is not configured' };
+  }
+
+  if (providedToken === undefined || providedToken === null || providedToken === '') {
+    if (required) {
+      return { error: 'admin_token is required' };
+    }
+
+    return { value: null };
+  }
+
+  if (String(providedToken) !== String(expectedToken)) {
+    return { error: 'invalid admin_token' };
+  }
+
+  return { value: true };
+}
