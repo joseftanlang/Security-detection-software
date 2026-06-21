@@ -57,12 +57,16 @@ print("FULL PROOF:", proof1)
 ver = requests.post(apipath+"verifyproof", json={ "proof": proof1, "groupName": g1name}).json()
 print("VERIFIED:", ver)
 
+# try re-verifying proof again 
+ver2 = requests.post(apipath+"verifyproof", json={ "proof": proof1, "groupName": g1name}).json()
+print("DUPLICATE VERIFICATION (should fail):", ver2)
+
 # add i2 to group and see if it still verifies
 print("\nUPDATE BATCH AND EXPIRE PROOF AND TRY AGAIN") 
 print("AFT ADD i2 TO GROUP TOO BUT OLD PROOF:", requests.get(apipath+"grouproot?groupName="+str(g1name)).json())
 requests.post(apipath+"addtogroup", json={"groupName": g1name, "commitment": i1['commitment']})
 requests.post(apipath+"addtogroup", json={"groupName": g1name, "commitment": i2['commitment']})
 requests.post(apipath+"addtogroup", json={"groupName": g1name, "commitment": i3['commitment']})
-requests.get(apipath+"nextbatch?groupName="+str(g1name)) 
+requests.get(apipath+"nextbatch?groupName="+str(g1name), {'admin_token': admin_token}) 
 ver = requests.post(apipath+"verifyproof", json={ "proof": proof1, "groupName": g1name}).json()
 print("VERIFIED:", ver)

@@ -122,6 +122,5 @@ This is the method to create a group. Make a GET request to `/newgroup` with `gr
 These are mostly endpoints to provide cryptographic utilities on the admin's side, for any tracing or debugging purposes. Both these methods take the admin token and the user's identity commitment, but `getgroupidx` will take the group name while `getgroupidxwithgid` will use the groupId instead. 
 
 # MAJOR TODOs 
-- verify no duplicate nullifiers
 - use real blockchain instead of simulated  
 - when checking admin token, use challenge-response or time-gated methods 

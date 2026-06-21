@@ -34,6 +34,7 @@ const groups = {}; // active groups
 const newMembers = {}; // next groups 
 const pendingMemberIdentifiers = {}; // next groups: groupId -> { commitment: identifier }
 const memberIdentifiers = {}; // active groups: groupId -> { commitment: identifier }
+const usedNullifiers = {}; // active groups: groupId -> { nullifier: true }
 
 
 
@@ -530,8 +531,26 @@ router.post("/verifyproof", async (req, res) => {
         return res.status(400).json({verified:false, error:"Invalid or Expired proof"})
     }
 
+    const groupId = groupIds[groupName];
+    const nullifierKey = String(sproof.nullifier);
+    //console.log(usedNullifiers); 
+    if (usedNullifiers[groupId]?.[nullifierKey]) {
+        return res.status(400).json({
+            verified: false,
+            error: 'nullifier already used'
+        });
+    }
+
+    const verified = await verifyProof(sproof);
+    if (verified) {
+        if (!(groupId in usedNullifiers)) {
+            usedNullifiers[groupId] = {};
+        }
+        usedNullifiers[groupId][nullifierKey] = true;
+    }
+
     res.json({
-        verified: await verifyProof(sproof) 
+        verified
     }); 
 })
 
@@ -614,6 +633,8 @@ function handleNextBatch(req, res) {
     memberIdentifiers[groupId] = { ...(pendingMemberIdentifiers[groupId] || {}) };
     newMembers[groupId] = [];
     pendingMemberIdentifiers[groupId] = {};
+    usedNullifiers[groupId] = {};
+    //console.log(usedNullifiers); 
 
     res.json({success:true})
 }
