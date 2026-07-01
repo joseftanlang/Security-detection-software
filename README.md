@@ -1,127 +1,152 @@
-# untye-testapi-v0
+# Untye Test API
 
-testing API (not deployed on blockchain yet) 
+Untye Test API is an Express-based service for testing a Semaphore-style identity flow. It creates identities, adds them to groups, issues Merkle proofs, and verifies Semaphore proofs. The code here is still a testing/simulation setup rather than a blockchain-backed deployment.
 
-using expressJS
+## What This Repo Contains
 
-## Connecting to it from other containers 
-```wget -qO- http://testapi-testapi-1:2026/```
+- `src/` is the main API server.
+- `demo/` is a Docker Compose stack that runs the API, a policy checker, an init service, and a browser UI.
+- `forms/` is a separate Docker Compose stack for the forms integration path.
+- `custom_script.html` is a small client-side proof verification helper.
+- `python_testing/` contains a lightweight Python test script.
 
+## Quick Start
 
-# Setup 
+### 1. Install dependencies
 
 ```bash
 npm install
+```
+
+### 2. Set up environment variables
+
+Copy `.env.example` to `.env` and fill in the values you need. At minimum, set `ADMIN_TOKEN` if you plan to call admin endpoints.
+
+### 3. Start the API
+
+```bash
 npm run dev
 ```
 
+The API listens on `PORT`, which defaults to `2026`.
 
-# API Overview 
+### 4. Check it is up
 
-## TLDR 
+```bash
+curl "http://localhost:2026/api/echo?msg=ok"
+```
 
-Do set `ADMIN_TOKEN` when using admin endpoints, and set `OPENID_IDENTIFIER_CLAIM` for OpenID integration, with `CHECKER_ENDPOINT` to have control over issuance of verification certificates. For verifying proofs, if required, set `MESSAGE_VAL` and `SCOPE_VAL` to standardize verifications more and check duplication with a nullifier. Or, set `VALIDATE_MESSAGESCOPE_ENDPOINT` for more finegrained control
+## Local Usage Notes
 
-Note the delay in user's ability to verify their proofs; it is recommended to automatically add all users to a new batch daily by default, to provide maximum privacy. For the privacy guarantees, allowing the user to call the public endpoints (listed below) is necessary. 
+The server code uses ES module syntax. If your local Node setup does not already treat `.js` files as modules, enable ESM support for this package before running `npm start` or `npm run dev`.
 
-### Endpoints needing admin token 
-The endpoints that need admin token are: 
+The root server also serves a small login page at `GET /?formId=...` and a failure page at `/failure`.
 
-- `newgroup`
-- `nextbatch`
-- `getgroupidx`
-- `getgroupidxwithgid`
+## Demo Stack
 
-### OpenID identifier and checker endpoint 
-The protocol has integration with the OpenID standard, obtaining user identities from the JWTs issued. The `OPENID_IDENTIFIER_CLAIM` environment variable should be set to follow yours. 
+The demo stack is the easiest way to see the full flow end to end:
 
-#### To set rules for adding members to groups 
-Set the environment variable `CHECKER_ENDPOINT` as an endpoint to your server to decide whether a user can have their identity be added to a group or not. Whenever each user makes such a request to the `/addtogroup` API, it will call your `CHECKER_ENDPOINT` with a POST request containing the JSON body `{ "groupName": "...", "commitment": "...", "identifier": "..." }`.
+1. A user signs in with an OpenID JWT.
+2. The UI creates a temporary Semaphore identity.
+3. The API adds the commitment to a group through `/api/addtogroup`.
+4. The init service creates the demo group and advances batches.
+5. The UI refreshes the Merkle proof and generates a Semaphore proof when the identity becomes active.
 
-The API format of `CHECKER_ENDPOINT` is:
-- `POST <CHECKER_ENDPOINT>`
-- Request JSON body: `{ "groupName": "...", "commitment": "...", "identifier": "..." }`
-- Response JSON: `{ "success": true }` or `{ "success": false, "error": "..." }`
+Run it from the repository root:
 
-### Current Batch and Next Batch in each Group 
+```bash
+docker compose -f demo/demo-compose.yml up --build
+```
 
-For each group, there'll be a current batch and next batch. Everytime a user's identity requests to be added to a group, they will be added to the next batch and they cannot yet verify themselves. Only when the admin triggers `/nextbatch`, then every entry in the Current Batch is cleared, and the Next Batch becomes the Current one, and the users can use their identity to verify themselves. This encourages batch issuance; without batch issuance with a sufficiently large atch, users can be potentially traced by timestamp and it may be a privacy concern. 
+Useful demo URLs:
 
-### Public endpoints 
-To ensure the clientside handler for this protocol can be standardized across implementations, the following endpoints must be made available to the public: 
-- `/addtogroup` 
-- `/getmerkleproof` 
-- `/grouproot`
-- `/verifymessagescope`
-- `/verifyproof`  
-- `/newidentity`, `/recoveridentity`, and `/generateproof` must also not be edited 
+- UI: `http://localhost:8080`
+- API health check: `http://localhost:2026/api/echo?msg=ok`
 
-### Verifying proofs 
-See "POST `/verifyproof` below. 
+The demo stack includes:
 
-## Methods 
+- `api`: the main Untye API
+- `checker`: policy endpoint used by `CHECKER_ENDPOINT`
+- `init`: bootstrap service that creates the demo group
+- `ui`: browser dashboard for the identity flow
 
-## Public functions 
+## Forms Stack
 
-### GET `/newidentity`, POST `/recoveridentity`, and POST `/generateproof` 
-These are public methods providing mathematical utilities crucial to the protocol. These are cryptographic steps that, strictly speaking, are doable by other parties, and must not be changed as they are standards of the protocol. 
+The `forms/` folder is a separate deployment path that reuses the API server and connects to the `formbricks_default` Docker network.
 
-#### GET `/newidentity`
+Run it from the repository root:
 
-`/newidentity` takes in no parameters.
+```bash
+docker compose -f forms/forms-compose.yml up --build
+```
 
-- Request JSON: none
-- Response JSON: `{ "privateKey": [<32 bytes>], "publicKey": "...", "commitment": "..." }`
+## Environment Variables
 
-#### POST `/recoveridentity`
+### Core API
 
-`/recoveridentity` takes in the Semaphore user private key.
+- `PORT`: server port, default `2026`.
+- `ADMIN_TOKEN`: required for admin-only endpoints.
+- `BOOTSTRAP_GROUPS`: number of groups to auto-create at startup.
+- `OPENID_IDENTIFIER_CLAIM`: JWT claim used as the permanent user identifier, default `sub`.
+- `CHECKER_ENDPOINT`: optional policy service used by `/api/addtogroup`.
+- `MESSAGE_VAL` and `SCOPE_VAL`: fixed values used by proof validation when no custom validator is configured.
+- `VALIDATE_MESSAGESCOPE_ENDPOINT`: optional external validation service for message/scope checks.
+- `DEBUG_IGNORE_JWT`: bypasses JWT checking for local debugging when set to a truthy value.
+- `ENFORCE_SAME_SITE_REQUESTS`: blocks cross-site requests when enabled outside development.
+- `FORMS_LINK`: redirect base used by the login page after a proof is generated.
 
-- Request body parameters: `privateKey` (array of ints from 0-255) 
-- Response JSON: `{ "privateKey": [<32 bytes>], "publicKey": "...", "commitment": "..." }`
+### Demo Services
 
-#### POST `/generateproof`
+- `API_BASE_URL`: internal URL used by the demo UI and init service.
+- `ALLOWED_GROUP`: group name allowed by the demo checker, default `demo-users`.
+- `MAX_IDENTITIES_PER_USER`: how many commitments the checker allows per user.
+- `DEMO_GROUP_NAME`: group created by the init service.
+- `BATCH_INTERVAL_SECONDS`: batch timing used by the demo bootstrap flow.
 
-`/generateproof` requres the POST request's body to contain `privateKey`, `merkleProof`, `message`, and `scope`. The message and scope used for verification is expected to be communicated to the public through other means.
+## API Overview
 
-- Request JSON body: `{ "privateKey": [...], "merkleProof": { "root": "...", "leaf": "...", "index": 0, "siblings": ["..."] }, "message": "...", "scope": "..." }`
-- Response JSON: a Semaphore proof, `{ "merkleTreeDepth": 0, "merkleTreeRoot": "...", "nullifier": "...", "message": "...", "scope": "...", "points": [...] }`
+### Public endpoints
 
-### POST `/verifyproof` 
+- `GET /api/newidentity`: create a fresh Semaphore identity.
+- `POST /api/recoveridentity`: rebuild an identity from a private key.
+- `POST /api/addtogroup`: add a commitment to a group for the current user.
+- `GET /api/getmerkleproof`: fetch the Merkle proof for a commitment.
+- `POST /api/generateproof`: generate a Semaphore proof.
+- `GET /api/grouproot`: fetch the current Merkle root for a group.
+- `POST /api/verifymessagescope`: validate message/scope rules without checking a proof.
+- `POST /api/verifyproof`: verify a Semaphore proof.
+- `GET /api/echo` and `POST /api/echo`: simple health-check and echo endpoints.
 
-`/verifyproof` requires the POST request's body to contain the keys `groupName`, and `proof`; where `proof` is in the format of a Semaphore proof in JSON. The requirements of the proof's `message` and `scope` can be set through the environment variables `MESSAGE_VAL`, `SCOPE_VAL` to the single right value, or setting the `VALIDATE_MESSAGESCOPE_ENDPOINT` to point to your own custom endpoint that takes the message and scope of validation and returns a validation result. This setting can also be communicated to the public lest verifiers want to run verification themselves. 
+### Admin endpoints
 
-The API format of `VALIDATE_MESSAGESCOPE_ENDPOINT` is: 
-- `POST <VALIDATE_MESSAGESCOPE_ENDPOINT>`
-- Request JSON body: `{ "groupName": "...", "message": "...", "scope": "..." }`
-- Response JSON: `{ "verified": true }` or `{ "verified": false, "error": "..." }`
+- `GET /api/newgroup`: create a new group.
+- `GET /api/nextbatch`: promote the next batch to the current batch.
+- `GET /api/getgroupidx`: look up a group index by group name.
+- `GET /api/getgroupidxwithgid`: look up a group index by group ID.
 
-### POST `/verifymessagescope`
+## Typical Request Flow
 
-`/verifymessagescope` requires the POST request's body to contain the keys `groupName`, `message`, and `scope`. It uses the same validation rules as `/verifyproof`, but skips the Semaphore proof itself.
+1. Create or recover an identity.
+2. Add the commitment to a group with `/api/addtogroup`.
+3. Wait until the admin advances the batch with `/api/nextbatch`.
+4. Fetch the Merkle proof with `/api/getmerkleproof`.
+5. Generate a proof with `/api/generateproof`.
+6. Verify it with `/api/verifyproof`.
 
-### POST `/addtogroup` 
-This is called by the user, to ensure the clientside handler is standardized across different implementations. However, one can use `CHECKER_ENDPOINT` , as well as the OpenID Integration from `OPENID_IDENTIFIER_CLAIM` , to control the issuance of certificates. See "OpenID identifier and checker endpoint" section in TL;DR for details 
+The batch delay is intentional: identities are added to the next batch first, so they are not immediately verifiable until the batch is promoted.
 
-### GET `/getmerkleproof` 
-This is also called by the user, and should never be denied for users with valid JWTs. 
+## Integration Notes
 
-### GET `/grouproot` 
-This is also a public method, but is called by the verifier instead. This is used to verify that the verification proof is not expired and not faked, by ensuring its root matches the current group's rot. 
+- `CHECKER_ENDPOINT` is a policy hook. The API sends `{ groupName, commitment, identifier }` and expects `{ success: true }` or `{ success: false, error: "..." }`.
+- `VALIDATE_MESSAGESCOPE_ENDPOINT` follows the same pattern for message/scope validation.
+- `OPENID_IDENTIFIER_CLAIM` should match the claim name in your JWTs if you do not want to use the default `sub` claim.
 
-This is called by setting `groupName` as a query parameter. 
+## Limitations
 
-## Admin methods overview 
+- The backend is still in-memory/testing oriented.
+- Admin authentication is token-based and should be hardened before production use.
+- JWT handling currently relies on claim extraction rather than full signature verification.
 
-### GET `newgroup`
-This is the method to create a group. Make a GET request to `/newgroup` with `groupName` and `admin_token` 
 
-### GET `nextbatch`
-
-### GET `getgroupidx` and `getgroupidxwithgid`
-These are mostly endpoints to provide cryptographic utilities on the admin's side, for any tracing or debugging purposes. Both these methods take the admin token and the user's identity commitment, but `getgroupidx` will take the group name while `getgroupidxwithgid` will use the groupId instead. 
-
-# MAJOR TODOs 
-- use real blockchain instead of simulated  
-- ensure JWT signing is enforced well 
-- when checking admin token, use challenge-response or time-gated methods 
+## Liscence
+This is the liscence of this project on 2026 in Singapore.
